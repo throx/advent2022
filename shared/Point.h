@@ -24,6 +24,14 @@ public:
         }
     }
 
+    Point Clamp(__int64 c) const {
+        Point clamped;
+        for (int i = 0; i < N; ++i) {
+            clamped.at(i) = std::min(std::max(at(i), -c), c);
+        }
+        return clamped;
+    }
+
     template<class _F>
     void DoNeighbours(_F fn) const
     {
