@@ -28,7 +28,7 @@ void Cpu::RunTo(int cycle)
 {
 	while (true) {
 		string instr = m_opcodes[m_ip];
-		vector<string> args = Split(instr, ' ');
+		vector<string> args = Split<string>(instr, ' ');
 		const string& opcode = args[0];
 
 		int t = m_instr_times[opcode];

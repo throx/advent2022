@@ -7,94 +7,81 @@
 #include <cctype>
 #include <locale>
 
-// trim from start (in place)
-static inline void ltrim(std::string& s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+// trim from start
+[[nodiscard]]
+static inline std::string ltrim(const std::string& s) {
+    std::string r(s);
+    r.erase(r.begin(), std::find_if(r.begin(), r.end(), [](unsigned char ch) {
         return !std::isspace(ch);
         }));
-}
-
-// trim from end (in place)
-static inline void rtrim(std::string& s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-        }).base(), s.end());
-}
-
-// trim from both ends (in place)
-static inline void trim(std::string& s) {
-    ltrim(s);
-    rtrim(s);
-}
-
-// trim from start (copying)
-static inline std::string ltrim_copy(std::string s) {
-    ltrim(s);
-    return s;
-}
-
-// trim from end (copying)
-static inline std::string rtrim_copy(std::string s) {
-    rtrim(s);
-    return s;
-}
-
-// trim from both ends (copying)
-static inline std::string trim_copy(std::string s) {
-    trim(s);
-    return s;
-}
-
-std::vector<std::string> Split(std::string s, char tok = ',')
-{
-    std::istringstream iss(s);
-    std::vector<std::string> r;
-    std::string n;
-
-    while (getline(iss, n, tok)) {
-        trim(n);
-        r.push_back(n);
-    }
-
     return r;
+}
+
+// trim from end
+[[nodiscard]]
+static inline std::string rtrim(const std::string& s) {
+    std::string r(s);
+    r.erase(std::find_if(r.rbegin(), r.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+        }).base(), r.end());
+    return r;
+}
+
+// trim from both ends
+[[nodiscard]]
+static inline std::string trim(const std::string& s) {
+    return ltrim(rtrim(s));
 }
 
 template<class _F>
-void Split(std::string s, _F fn, char tok = ',')
+void Split(const std::string& s, _F fn, char tok = ',')
 {
     std::istringstream iss(s);
     std::string n;
 
     while (getline(iss, n, tok)) {
-        trim(n);
-        fn(n);
+        fn(trim(n));
     }
 }
 
-std::vector<int> SplitInt(std::string s, char tok = ',')
+template<class T>
+std::vector<T> Split(const std::string& s, char tok = ',')
 {
-    std::istringstream iss(s);
-    std::vector<int> r;
-    std::string n;
-
-    while (getline(iss, n, tok)) {
-        trim(n);
-        r.push_back(stoi(n));
-    }
-
+    std::vector<T> r;
+    Split(s, [&](std::string&& x) {
+        T t;
+        std::istringstream iss(x);
+        iss >> t;
+        r.push_back(t);
+        }, tok);
     return r;
 }
 
-std::vector<__int64> SplitI64(std::string s, char tok = ',')
-{
-    std::istringstream iss(s);
-    std::vector<__int64> r;
-    std::string n;
 
-    while (getline(iss, n, tok)) {
-        trim(n);
-        r.push_back(stoll(n));
+template<class _F>
+void Split(const std::string& s, _F fn, const std::string& tok = "->")
+{
+    std::string buf(s);
+    auto p = buf.find(tok);
+    while (p != -1) {
+        fn(trim(buf.substr(0, p)));
+        buf = buf.substr(p + tok.length());
+        p = buf.find(tok);
     }
 
+    fn(trim(buf));
+}
+
+template<class T>
+std::vector<T> Split(const std::string& s, const std::string& tok)
+{
+    std::vector<T> r;
+    Split(s, [&](std::string&& x) {
+        T t;
+        std::istringstream iss(x);
+        iss >> t;
+        r.push_back(t);
+        }, tok);
     return r;
 }
+

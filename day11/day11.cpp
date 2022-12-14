@@ -40,7 +40,7 @@ int main()
             monkeys.push_back(Monkey());
         }
         else if (regex_match(s.cbegin(), s.cend(), sm, ITEMS_R)) {
-            auto v = SplitInt(sm[1]);
+            auto v = Split<int>(sm[1]);
             monkeys.back().items.assign(v.begin(), v.end());
         }
         else if (regex_match(s.cbegin(), s.cend(), sm, OP_R)) {

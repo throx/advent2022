@@ -86,6 +86,55 @@ template<int N> std::ostream& operator<< (std::ostream& os, const Point<N>& p)
     return os;
 }
 
+template<int N> std::istream& operator>> (std::istream& is, Point<N>& p)
+{
+   if (is.flags() && std::ios::skipws) {
+        while (isspace(is.peek())) {
+            is.ignore();
+        }
+    }
+
+    bool brace = false;
+    if (is.peek() == '(') {
+        is.ignore();
+        brace = true;
+    }
+
+    int c = 1;
+
+    is >> p.at(0);
+
+    while (c < N) {
+        while (isspace(is.peek())) {
+            is.ignore();
+        }
+        if (is.peek() != ',') {
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+        is.ignore();
+
+        is >> p.at(c);
+        ++c;
+    }
+
+    if (brace) {
+        if (is.flags() && std::ios::skipws) {
+            while (isspace(is.peek())) {
+                is.ignore();
+            }
+        }
+
+        if (is.peek() != '(') {
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+        is.ignore();
+    }
+
+    return is;
+}
+
 // Manhattan distance
 template<int N>
 __int64 Dist(const Point<N>& p1, const Point<N>& p2) {
@@ -94,6 +143,31 @@ __int64 Dist(const Point<N>& p1, const Point<N>& p2) {
         sum += abs(p1[i] - p2[i]);
     }
     return sum;
+}
+
+// Do something for every point on a line.  incl_end indicates whether to call for end point or not
+template<int N, class _F>
+void DoLine(const Point<N>& p1, const Point<N>& p2, _F fn, bool incl_end = true) {
+    Point<N> pos(p1);
+    while (pos != p2) {
+        fn(pos);
+        pos += (p2 - pos).Clamp(1);
+    }
+    if (incl_end) {
+        fn(pos);
+    }
+}
+
+template<class Iterator, class _F>
+void DoLines(Iterator begin, Iterator end, _F fn) {
+    auto pos = *begin;
+    ++begin;
+    while (begin != end) {
+        DoLine(pos, *begin, fn, false);
+        pos = *begin;
+        ++begin;
+    }
+    fn(pos);
 }
 
 typedef Point<2> Point2;
