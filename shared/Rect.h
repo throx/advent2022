@@ -25,6 +25,10 @@ private:
 
 public:
     Rect() {}
+    Rect(const Point<N>& one) :
+        m_start(one), m_end(one + ONE)
+    {}
+
     Rect(const Point<N>& start, const Point<N>& end) :
         m_start(start), m_end(end)
     {
@@ -94,6 +98,26 @@ public:
         if (m_start < other.m_start) return true;
         if (m_start > other.m_start) return false;
         return m_end < other.m_end;
+    }
+
+    Rect<N> ExpandTo(const Point<N>& pt) const
+    {
+        Rect<N> ret;
+        for (int i = 0; i < N; ++i) {
+            ret.m_start[i] = std::min(m_start[i], pt[i]);
+            ret.m_end[i] = std::max(m_end[i], pt[i] + 1);
+        }
+        return ret;
+    }
+
+    Rect<N> ExpandBy(int increase) const
+    {
+        Rect<N> ret;
+        for (int i = 0; i < N; ++i) {
+            ret.m_start[i] = m_start[i] - increase;
+            ret.m_end[i] += m_end[i] + increase;
+        }
+        return ret;
     }
 
     Rect<N> Bound(const Rect<N>& other) const
