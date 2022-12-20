@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <regex>
-#include <unordered_map>
 #include <map>
 #include <vector>
 #include <conio.h>
@@ -11,7 +10,11 @@ using namespace std;
 const regex INPUT_R("Blueprint \\d+: Each ore robot costs (\\d+) ore. Each clay robot costs (\\d+) ore. Each obsidian robot costs (\\d+) ore and (\\d+) clay. Each geode robot costs (\\d+) ore and (\\d+) obsidian.");
 
 typedef vector<int> Robot; // Type -> Count
-typedef vector<Robot> Blueprint;
+
+struct Blueprint : public vector<Robot> {
+    vector<int> typemax;
+};
+
 typedef vector<Blueprint> Blueprints;
 
 enum RobotType {
@@ -78,8 +81,10 @@ namespace std {
 
 }
 
+// For some reason, map<> is faster than unordered_map<> for me.
+typedef map<Turn, int> Cache;
 
-typedef unordered_map<Turn, int> Cache;
+static int bb = 999;
 
 int dfs_build(const Blueprint& b, int time_limit, const Turn& turn, Cache& cache)
 {
@@ -111,6 +116,12 @@ int dfs_build(const Blueprint& b, int time_limit, const Turn& turn, Cache& cache
     bool can_build_all = true;
     for (int r = GEODE; r >= 0; --r) {
 
+        // Check if we don't need it - this was the magic that made it computable.  Thanks AA.
+        if (turn.robots[r] >= b.typemax[r]) {
+            continue;
+        }
+
+        // Check if we can build it
         bool can_build = true;
         for (int c = 0; c < MAXTYPE; ++c) {
             if (turn.resources[c] < b[r][c]) {
@@ -138,6 +149,7 @@ int dfs_build(const Blueprint& b, int time_limit, const Turn& turn, Cache& cache
         }
     }
 
+    // Only check the "don't build" option if there's not a surplus for every robot
     if (!can_build_all) {
         for (int c = 0; c < MAXTYPE; ++c) {
             new_turn.resources[c] = turn.resources[c] + turn.robots[c];
@@ -148,7 +160,6 @@ int dfs_build(const Blueprint& b, int time_limit, const Turn& turn, Cache& cache
     }
 
     {
-        static int bb = 999;
         if (bb >= now) {
             bb = now;
             cout << "BB: " << now << endl;
@@ -165,6 +176,7 @@ int dfs_build(const Blueprint& b, int time_limit) {
         {0,0,0,0},
         {1,0,0,0}
     };
+    bb = 99;
 
     Cache cache;
 
@@ -172,86 +184,6 @@ int dfs_build(const Blueprint& b, int time_limit) {
 
     cout << "Best = " << r << endl;
     return r;
-}
-
-vector<Turn> get_best(const Blueprint& b, const vector<Turn>& turns, int& best_val)
-{
-    vector<Turn> best_turns;
-
-    for (auto& turn : turns) {
-
-        Turn new_turn;
-        new_turn.num = turn.num + 1;
-        bool can_build_all = true;
-        for (int r = GEODE; r >= 0; --r) {
-
-            bool can_build = true;
-            for (int c = 0; c < MAXTYPE; ++c) {
-                if (turn.resources[c] < b[r][c]) {
-                    can_build = false;
-                    break;
-                }
-            }
-
-            if (can_build) {
-                for (int c = 0; c < MAXTYPE; ++c) {
-                    new_turn.resources[c] = turn.resources[c] - b[r][c] + turn.robots[c];
-                    new_turn.robots[c] = turn.robots[c];
-                }
-                new_turn.robots[r]++;
-
-                if (new_turn.resources[GEODE] > best_val) {
-                    best_val = new_turn.resources[GEODE];
-                    best_turns.clear();
-                }
-                if (new_turn.resources[GEODE] == best_val) {
-                    best_turns.push_back(new_turn);
-                }
-            }
-            else {
-                can_build_all = false;
-            }
-        }
-
-        if (!can_build_all) {
-            for (int c = 0; c < MAXTYPE; ++c) {
-                new_turn.resources[c] = turn.resources[c] + turn.robots[c];
-                new_turn.robots[c] = turn.robots[c];
-            }
-
-            if (new_turn.resources[GEODE] > best_val) {
-                best_val = new_turn.resources[GEODE];
-                best_turns.clear();
-            }
-            if (new_turn.resources[GEODE] == best_val) {
-                best_turns.push_back(new_turn);
-            }
-        }
-    }
-
-    return best_turns;
-}
-
-// This is wrong.  The first sample has a case where it
-// delays getting the geode to build more machines, and then
-// ramps faster.  Ughhh............
-int bfs_build(const Blueprint& b, int time_limit) {
-    Turn turn = {
-        0,
-        {0,0,0,0},
-        {1,0,0,0}
-    };
-
-    vector<Turn> turns;
-    turns.push_back(turn);
-
-    int best_val = 0;
-    for (int t = 1; t <= time_limit; ++t) {
-        turns = get_best(b, turns, best_val);
-        cout << t << ": " << best_val << " / " << turns.size() << endl;
-    }
-
-    return best_val;
 }
 
 int main()
@@ -286,24 +218,28 @@ int main()
             b.push_back(obsidian);
             b.push_back(geode);
 
+            b.typemax.resize(4);
+            b.typemax[ORE] = max({ ore[ORE], clay[ORE], obsidian[ORE], geode[ORE] });
+            b.typemax[CLAY] = obsidian[CLAY];
+            b.typemax[OBSIDIAN] = geode[OBSIDIAN];
+            b.typemax[GEODE] = std::numeric_limits<int>().max();
+
             blueprints.push_back(b);
         }
     }
-
-    //int part1 = 0;
-    //const int TIME1 = 24;
-    //for (int i = 0; i < blueprints.size(); ++i) {
-    //    part1 += dfs_build(blueprints[i], TIME1) * (i + 1);
-    //}
-
-    // RESULTS...
-
-    //cout << "Part 1: " << part1 << endl;
+    /*
+    int part1 = 0;
+    const int TIME1 = 24;
+    for (int i = 0; i < blueprints.size(); ++i) {
+        part1 += dfs_build(blueprints[i], TIME1) * (i + 1);
+    }
+    cout << "Part 1: " << part1 << endl;
+    */
 
     int part2 = 1;
     const int TIME2 = 32;
     for (int i = 0; i < blueprints.size() && i < 3; ++i) {
-        part2 *= bfs_build(blueprints[i], TIME2);
+        part2 *= dfs_build(blueprints[i], TIME2);
     }
     cout << "Part 2: " << part2 << endl;
 
