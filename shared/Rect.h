@@ -130,6 +130,19 @@ public:
         return ret;
     }
 
+    template<class Iterator>
+    static Rect<N> BoundOf(Iterator begin, Iterator end) {
+        if (begin == end) return Rect<N>();
+
+        Rect<N> ret = *begin;
+        ++begin;
+        while (begin != end) {
+            ret = ret.ExpandTo(*begin);
+            ++begin;
+        }
+        return ret;
+    }
+
     __int64 BoundSize(const Rect<N>& other) const
     {
         __int64 area = 1;

@@ -186,6 +186,11 @@ namespace P2
     const Point2 L({ -1, 0 });
     const Point2 R({ 1, 0 });
 
+    const Point2 NE = N + E;
+    const Point2 SE = S + E;
+    const Point2 NW = N + W;
+    const Point2 SW = S + W;
+
     std::map<char, Point2> DIRS(
         {
             {'N', N},
